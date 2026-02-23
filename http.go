@@ -375,19 +375,20 @@ func logRequest(method, endpoint string, requestHeaders map[string]string, reque
 
 	if os.Getenv("debug") == "1" || os.Getenv("DEBUG") == "1" {
 
-		// define sensitive headers (lowercase for comparison)
-		sensitiveHeaders := map[string]bool{
-			"authorization":       true,
-			"x-api-key":           true,
-			"x-auth-token":        true,
-			"cookie":              true,
-			"set-cookie":          true,
-			"client_secret":       true,
-			"proxy-authorization": true,
+		// sensitive headers (lowercase)
+		sensitiveHeaders := map[string]struct{}{
+			"authorization":       {},
+			"x-api-key":           {},
+			"x-auth-token":        {},
+			"cookie":              {},
+			"set-cookie":          {},
+			"client-secret":       {},
+			"proxy-authorization": {},
 		}
 
 		maskIfSensitive := func(key, value string) string {
-			if sensitiveHeaders[strings.ToLower(key)] {
+			normalized := strings.ToLower(http.CanonicalHeaderKey(key))
+			if _, exists := sensitiveHeaders[normalized]; exists {
 				return "***"
 			}
 			return value
@@ -402,8 +403,7 @@ func logRequest(method, endpoint string, requestHeaders map[string]string, reque
 		var heads, rheads []string
 
 		for k, v := range requestHeaders {
-			maskedValue := maskIfSensitive(k, v)
-			heads = append(heads, fmt.Sprintf("\t%s : %s", k, maskedValue))
+			heads = append(heads, fmt.Sprintf("\t%s : %s", k, maskIfSensitive(k, v)))
 		}
 
 		for k, v := range responseHeaders {
