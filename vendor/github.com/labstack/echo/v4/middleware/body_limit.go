@@ -1,40 +1,39 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: © 2015 LabStack LLC and Echo contributors
+
 package middleware
 
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"sync"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/bytes"
 )
 
-type (
-	// BodyLimitConfig defines the config for BodyLimit middleware.
-	BodyLimitConfig struct {
-		// Skipper defines a function to skip middleware.
-		Skipper Skipper
+// BodyLimitConfig defines the config for BodyLimit middleware.
+type BodyLimitConfig struct {
+	// Skipper defines a function to skip middleware.
+	Skipper Skipper
 
-		// Maximum allowed size for a request body, it can be specified
-		// as `4x` or `4xB`, where x is one of the multiple from K, M, G, T or P.
-		Limit string `yaml:"limit"`
-		limit int64
-	}
+	// Maximum allowed size for a request body, it can be specified
+	// as `4x` or `4xB`, where x is one of the multiple from K, M, G, T or P.
+	Limit string `yaml:"limit"`
+	limit int64
+}
 
-	limitedReader struct {
-		BodyLimitConfig
-		reader  io.ReadCloser
-		read    int64
-		context echo.Context
-	}
-)
+type limitedReader struct {
+	BodyLimitConfig
+	reader io.ReadCloser
+	read   int64
+}
 
-var (
-	// DefaultBodyLimitConfig is the default BodyLimit middleware config.
-	DefaultBodyLimitConfig = BodyLimitConfig{
-		Skipper: DefaultSkipper,
-	}
-)
+// DefaultBodyLimitConfig is the default BodyLimit middleware config.
+var DefaultBodyLimitConfig = BodyLimitConfig{
+	Skipper: DefaultSkipper,
+}
 
 // BodyLimit returns a BodyLimit middleware.
 //
@@ -79,8 +78,11 @@ func BodyLimitWithConfig(config BodyLimitConfig) echo.MiddlewareFunc {
 			}
 
 			// Based on content read
-			r := pool.Get().(*limitedReader)
-			r.Reset(req.Body, c)
+			r, ok := pool.Get().(*limitedReader)
+			if !ok {
+				return echo.NewHTTPError(http.StatusInternalServerError, "invalid pool object")
+			}
+			r.Reset(req.Body)
 			defer pool.Put(r)
 			req.Body = r
 
@@ -102,9 +104,8 @@ func (r *limitedReader) Close() error {
 	return r.reader.Close()
 }
 
-func (r *limitedReader) Reset(reader io.ReadCloser, context echo.Context) {
+func (r *limitedReader) Reset(reader io.ReadCloser) {
 	r.reader = reader
-	r.context = context
 	r.read = 0
 }
 

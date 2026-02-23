@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/mudphilo/go-utils/models"
+	"github.com/mudphilo/go-utils/v2/models"
 	"log"
 	"os"
 	"strconv"
