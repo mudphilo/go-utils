@@ -370,36 +370,50 @@ func HTTPFormPostWithContext(ctx context.Context, endpoint string, headers map[s
 	return st, string(body)
 }
 
-func logRequest(method, endpoint string, requestHeaders map[string]string, requestBody interface{}, responseStatus int, responseHeader http.Header, responseBody string) {
+func logRequest(method, endpoint string, requestHeaders map[string]string, requestBody interface{},
+	responseStatus int, responseHeader http.Header, responseBody string) {
 
 	if os.Getenv("debug") == "1" || os.Getenv("DEBUG") == "1" {
 
+		// define sensitive headers (lowercase for comparison)
+		sensitiveHeaders := map[string]bool{
+			"authorization":       true,
+			"x-api-key":           true,
+			"x-auth-token":        true,
+			"cookie":              true,
+			"set-cookie":          true,
+			"client_secret":       true,
+			"proxy-authorization": true,
+		}
+
+		maskIfSensitive := func(key, value string) string {
+			if sensitiveHeaders[strings.ToLower(key)] {
+				return "***"
+			}
+			return value
+		}
+
 		responseHeaders := make(map[string]string)
-
 		for k, v := range responseHeader {
-
-			responseHeaders[k] = strings.Join(v, ",")
-
+			joined := strings.Join(v, ",")
+			responseHeaders[k] = maskIfSensitive(k, joined)
 		}
 
 		var heads, rheads []string
-		for k, v := range requestHeaders {
 
-			heads = append(heads, fmt.Sprintf("\t%s : %s", k, v))
+		for k, v := range requestHeaders {
+			maskedValue := maskIfSensitive(k, v)
+			heads = append(heads, fmt.Sprintf("\t%s : %s", k, maskedValue))
 		}
 
 		for k, v := range responseHeaders {
-
 			rheads = append(rheads, fmt.Sprintf("\t%s : %s", k, v))
 		}
 
 		body := "none"
-
 		if requestBody != nil {
-
 			jsonData, _ := json.Marshal(requestBody)
 			body = string(jsonData)
-
 		}
 
 		log.Printf("**** BEGIN HTTP %s REQUEST ****\n"+
@@ -413,11 +427,18 @@ func logRequest(method, endpoint string, requestHeaders map[string]string, reque
 			"%s\n"+
 			"Response Body\n"+
 			"**** END HTTP %s REQUEST ****\n"+
-			"\t%s", strings.ToUpper(method), endpoint, strings.Join(heads, "\n"), body, responseStatus, strings.Join(rheads, "\n"), strings.ToUpper(method), responseBody)
+			"\t%s",
+			strings.ToUpper(method),
+			endpoint,
+			strings.Join(heads, "\n"),
+			body,
+			responseStatus,
+			strings.Join(rheads, "\n"),
+			strings.ToUpper(method),
+			responseBody,
+		)
 	}
-
 }
-
 func ToMapStringInterface(d map[string]string) map[string]interface{} {
 
 	e := make(map[string]interface{})
