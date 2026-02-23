@@ -8,6 +8,7 @@ require (
 	github.com/jinzhu/now v1.1.5
 	github.com/labstack/echo-contrib v0.13.0
 	github.com/labstack/echo/v4 v4.9.1
+	github.com/mudphilo/go-utils v1.6.2
 	github.com/sendgrid/sendgrid-go v3.12.0+incompatible
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa

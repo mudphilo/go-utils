@@ -48,6 +48,9 @@ github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.14
 ## explicit; go 1.12
 github.com/mattn/go-isatty
+# github.com/mudphilo/go-utils v1.6.2
+## explicit; go 1.21
+github.com/mudphilo/go-utils/models
 # github.com/sendgrid/rest v2.6.9+incompatible
 ## explicit
 github.com/sendgrid/rest
