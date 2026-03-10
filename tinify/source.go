@@ -1,4 +1,4 @@
-package Tinify
+package tinify
 
 import (
 	"errors"
