@@ -20,7 +20,7 @@ func GetClient() *Client {
 
 	if len(key) == 0 {
 
-		key = os.Getenv("TINIIFY_API_KEY")
+		key = os.Getenv("TINIFY_API_KEY")
 	}
 
 	if len(key) == 0 {

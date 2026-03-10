@@ -2,6 +2,7 @@ package tinify
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -48,7 +49,13 @@ func FromFile(path string) (s *Source, err error) {
 }
 
 func FromBuffer(buf []byte) (s *Source, err error) {
-	response, err := GetClient().Request(http.MethodPost, "/shrink", buf)
+	ct := GetClient()
+	if ct == nil {
+
+		return nil, fmt.Errorf("tinify client not initialized check api key")
+	}
+
+	response, err := ct.Request(http.MethodPost, "/shrink", buf)
 	if err != nil {
 		return
 	}
@@ -60,7 +67,12 @@ func FromBuffer(buf []byte) (s *Source, err error) {
 func FromUrl(url string) (s *Source, err error) {
 	if len(url) == 0 {
 		err = errors.New("url is required")
-		return
+		return nil, err
+	}
+	ct := GetClient()
+	if ct == nil {
+
+		return nil, fmt.Errorf("tinify client not initialized check api key")
 	}
 
 	body := map[string]interface{}{
@@ -69,13 +81,13 @@ func FromUrl(url string) (s *Source, err error) {
 		},
 	}
 
-	response, err := GetClient().Request(http.MethodPost, "/shrink", body)
+	response, err := ct.Request(http.MethodPost, "/shrink", body)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	s, err = getSourceFromResponse(response)
-	return
+	return s, err
 }
 
 func getSourceFromResponse(response *http.Response) (s *Source, err error) {
@@ -121,7 +133,12 @@ func (s *Source) toResult() (r *Result, err error) {
 	//		return
 	//	}
 	//}
-	response, err := GetClient().Request(http.MethodGet, s.url, s.commands)
+	ct := GetClient()
+	if ct == nil {
+
+		return nil, fmt.Errorf("tinify client not initialized check api key")
+	}
+	response, err := ct.Request(http.MethodGet, s.url, s.commands)
 	if err != nil {
 		return
 	}
