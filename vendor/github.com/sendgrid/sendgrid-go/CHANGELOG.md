@@ -1,6 +1,43 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
+[2025-05-29] Version 3.16.1
+---------------------------
+**Library - Chore**
+- [PR #496](https://github.com/sendgrid/sendgrid-go/pull/496): update licence year. Thanks to [@tiwarishubham635](https://github.com/tiwarishubham635)!
+
+
+[2024-08-26] Version 3.16.0
+---------------------------
+**Library - Chore**
+- [PR #479](https://github.com/sendgrid/sendgrid-go/pull/479): updates for manual release. Thanks to [@sbansla](https://github.com/sbansla)!
+- [PR #477](https://github.com/sendgrid/sendgrid-go/pull/477): fixed failed test cases due to go upgrade. Thanks to [@sbansla](https://github.com/sbansla)!
+
+**Library - Feature**
+- [PR #471](https://github.com/sendgrid/sendgrid-go/pull/471): add mail_v3 functionality for reply_to_list. Thanks to [@lopezator](https://github.com/lopezator)!
+
+
+[2024-08-08] Version 3.15.0
+---------------------------
+**Library - Feature**
+- [PR #471](https://github.com/sendgrid/sendgrid-go/pull/471): add mail_v3 functionality for reply_to_list
+
+
+[2023-12-01] Version 3.14.0
+---------------------------
+**Library - Chore**
+- [PR #470](https://github.com/sendgrid/sendgrid-go/pull/470): removed SetHost and shifted SetDataResidency to sendgrid.go. Thanks to [@tiwarishubham635](https://github.com/tiwarishubham635)!
+
+**Library - Feature**
+- [PR #469](https://github.com/sendgrid/sendgrid-go/pull/469): added data residency for eu and global regions. Thanks to [@tiwarishubham635](https://github.com/tiwarishubham635)!
+
+
+[2023-08-10] Version 3.13.0
+---------------------------
+**Library - Feature**
+- [PR #468](https://github.com/sendgrid/sendgrid-go/pull/468): gzip mail body when content-encoding is set to gzip. Thanks to [@Bankq](https://github.com/Bankq)!
+
+
 [2022-09-21] Version 3.12.0
 ---------------------------
 **Library - Feature**

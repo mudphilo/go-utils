@@ -1,19 +1,54 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: © 2015 LabStack LLC and Echo contributors
+
 package middleware
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
 )
 
+// Example for `slog` https://pkg.go.dev/log/slog
+// 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+//	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+//		LogStatus:   true,
+//		LogURI:      true,
+//		LogError:    true,
+//		HandleError: true, // forwards error to the global error handler, so it can decide appropriate status code
+//		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+//			if v.Error == nil {
+//				logger.LogAttrs(context.Background(), slog.LevelInfo, "REQUEST",
+//					slog.String("uri", v.URI),
+//					slog.Int("status", v.Status),
+//				)
+//			} else {
+//				logger.LogAttrs(context.Background(), slog.LevelError, "REQUEST_ERROR",
+//					slog.String("uri", v.URI),
+//					slog.Int("status", v.Status),
+//					slog.String("err", v.Error.Error()),
+//				)
+//			}
+//			return nil
+//		},
+//	}))
+//
 // Example for `fmt.Printf`
 // 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-//		LogStatus: true,
-//		LogURI:    true,
+//		LogStatus:   true,
+//		LogURI:      true,
+//		LogError:    true,
+//		HandleError: true, // forwards error to the global error handler, so it can decide appropriate status code
 //		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-//			fmt.Printf("REQUEST: uri: %v, status: %v\n", v.URI, v.Status)
+//			if v.Error == nil {
+//				fmt.Printf("REQUEST: uri: %v, status: %v\n", v.URI, v.Status)
+//			} else {
+//				fmt.Printf("REQUEST_ERROR: uri: %v, status: %v, err: %v\n", v.URI, v.Status, v.Error)
+//			}
 //			return nil
 //		},
 //	}))
@@ -21,14 +56,23 @@ import (
 // Example for Zerolog (https://github.com/rs/zerolog)
 // 	logger := zerolog.New(os.Stdout)
 //	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-//		LogURI:    true,
-//		LogStatus: true,
+//		LogURI:      true,
+//		LogStatus:   true,
+//		LogError:    true,
+//		HandleError: true, // forwards error to the global error handler, so it can decide appropriate status code
 //		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-//			logger.Info().
-//				Str("URI", v.URI).
-//				Int("status", v.Status).
-//				Msg("request")
-//
+//			if v.Error == nil {
+//				logger.Info().
+//					Str("URI", v.URI).
+//					Int("status", v.Status).
+//					Msg("request")
+//			} else {
+//				logger.Error().
+//					Err(v.Error).
+//					Str("URI", v.URI).
+//					Int("status", v.Status).
+//					Msg("request error")
+//			}
 //			return nil
 //		},
 //	}))
@@ -36,29 +80,47 @@ import (
 // Example for Zap (https://github.com/uber-go/zap)
 // 	logger, _ := zap.NewProduction()
 //	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-//		LogURI:    true,
-//		LogStatus: true,
+//		LogURI:      true,
+//		LogStatus:   true,
+//		LogError:    true,
+//		HandleError: true, // forwards error to the global error handler, so it can decide appropriate status code
 //		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-//			logger.Info("request",
-//				zap.String("URI", v.URI),
-//				zap.Int("status", v.Status),
-//			)
-//
+//			if v.Error == nil {
+//				logger.Info("request",
+//					zap.String("URI", v.URI),
+//					zap.Int("status", v.Status),
+//				)
+//			} else {
+//				logger.Error("request error",
+//					zap.String("URI", v.URI),
+//					zap.Int("status", v.Status),
+//					zap.Error(v.Error),
+//				)
+//			}
 //			return nil
 //		},
 //	}))
 //
 // Example for Logrus (https://github.com/sirupsen/logrus)
-// 	log := logrus.New()
+//  log := logrus.New()
 //	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-//		LogURI:    true,
-//		LogStatus: true,
-//		LogValuesFunc: func(c echo.Context, values middleware.RequestLoggerValues) error {
-//			log.WithFields(logrus.Fields{
-//				"URI":   values.URI,
-//				"status": values.Status,
-//			}).Info("request")
-//
+//		LogURI:      true,
+//		LogStatus:   true,
+//		LogError:    true,
+//		HandleError: true, // forwards error to the global error handler, so it can decide appropriate status code
+//		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+//			if v.Error == nil {
+//				log.WithFields(logrus.Fields{
+//					"URI":    v.URI,
+//					"status": v.Status,
+//				}).Info("request")
+//			} else {
+//				log.WithFields(logrus.Fields{
+//					"URI":    v.URI,
+//					"status": v.Status,
+//					"error":  v.Error,
+//				}).Error("request error")
+//			}
 //			return nil
 //		},
 //	}))
@@ -73,6 +135,13 @@ type RequestLoggerConfig struct {
 	// LogValuesFunc defines a function that is called with values extracted by logger from request/response.
 	// Mandatory.
 	LogValuesFunc func(c echo.Context, v RequestLoggerValues) error
+
+	// HandleError instructs logger to call global error handler when next middleware/handler returns an error.
+	// This is useful when you have custom error handler that can decide to use different status codes.
+	//
+	// A side-effect of calling global error handler is that now Response has been committed and sent to the client
+	// and middlewares up in chain can not change Response status code or response body.
+	HandleError bool
 
 	// LogLatency instructs logger to record duration it took to execute rest of the handler chain (next(c) call).
 	LogLatency bool
@@ -180,12 +249,78 @@ func RequestLoggerWithConfig(config RequestLoggerConfig) echo.MiddlewareFunc {
 	return mw
 }
 
+// RequestLogger returns a RequestLogger middleware with default configuration which
+// uses default slog.slog logger.
+//
+// To customize slog output format replace slog default logger:
+// For JSON format: `slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))`
+func RequestLogger() echo.MiddlewareFunc {
+	config := RequestLoggerConfig{
+		LogLatency:       true,
+		LogProtocol:      false,
+		LogRemoteIP:      true,
+		LogHost:          true,
+		LogMethod:        true,
+		LogURI:           true,
+		LogURIPath:       false,
+		LogRoutePath:     false,
+		LogRequestID:     true,
+		LogReferer:       false,
+		LogUserAgent:     true,
+		LogStatus:        true,
+		LogError:         true,
+		LogContentLength: true,
+		LogResponseSize:  true,
+		LogHeaders:       nil,
+		LogQueryParams:   nil,
+		LogFormValues:    nil,
+		HandleError:      true, // forwards error to the global error handler, so it can decide appropriate status code
+		LogValuesFunc: func(c echo.Context, v RequestLoggerValues) error {
+			if v.Error == nil {
+				slog.LogAttrs(context.Background(), slog.LevelInfo, "REQUEST",
+					slog.String("method", v.Method),
+					slog.String("uri", v.URI),
+					slog.Int("status", v.Status),
+					slog.Duration("latency", v.Latency),
+					slog.String("host", v.Host),
+					slog.String("bytes_in", v.ContentLength),
+					slog.Int64("bytes_out", v.ResponseSize),
+					slog.String("user_agent", v.UserAgent),
+					slog.String("remote_ip", v.RemoteIP),
+					slog.String("request_id", v.RequestID),
+				)
+			} else {
+				slog.LogAttrs(context.Background(), slog.LevelError, "REQUEST_ERROR",
+					slog.String("method", v.Method),
+					slog.String("uri", v.URI),
+					slog.Int("status", v.Status),
+					slog.Duration("latency", v.Latency),
+					slog.String("host", v.Host),
+					slog.String("bytes_in", v.ContentLength),
+					slog.Int64("bytes_out", v.ResponseSize),
+					slog.String("user_agent", v.UserAgent),
+					slog.String("remote_ip", v.RemoteIP),
+					slog.String("request_id", v.RequestID),
+
+					slog.String("error", v.Error.Error()),
+				)
+			}
+			return nil
+		},
+	}
+	mw, err := config.ToMiddleware()
+	if err != nil {
+		panic(err)
+	}
+	return mw
+}
+
 // ToMiddleware converts RequestLoggerConfig into middleware or returns an error for invalid configuration.
 func (config RequestLoggerConfig) ToMiddleware() (echo.MiddlewareFunc, error) {
 	if config.Skipper == nil {
 		config.Skipper = DefaultSkipper
 	}
-	now = time.Now
+	now := time.Now
 	if config.timeNow != nil {
 		now = config.timeNow
 	}
@@ -217,6 +352,9 @@ func (config RequestLoggerConfig) ToMiddleware() (echo.MiddlewareFunc, error) {
 				config.BeforeNextFunc(c)
 			}
 			err := next(c)
+			if err != nil && config.HandleError {
+				c.Error(err)
+			}
 
 			v := RequestLoggerValues{
 				StartTime: start,
@@ -264,7 +402,9 @@ func (config RequestLoggerConfig) ToMiddleware() (echo.MiddlewareFunc, error) {
 			}
 			if config.LogStatus {
 				v.Status = res.Status
-				if err != nil {
+				if err != nil && !config.HandleError {
+					//  this block should not be executed in case of HandleError=true as the global error handler will decide
+					//  the status code. In that case status code could be different from what err contains.
 					var httpErr *echo.HTTPError
 					if errors.As(err, &httpErr) {
 						v.Status = httpErr.Code
@@ -310,6 +450,9 @@ func (config RequestLoggerConfig) ToMiddleware() (echo.MiddlewareFunc, error) {
 				return errOnLog
 			}
 
+			// in case of HandleError=true we are returning the error that we already have handled with global error handler
+			// this is deliberate as this error could be useful for upstream middlewares and default global error handler
+			// will ignore that error when it bubbles up in middleware chain.
 			return err
 		}
 	}, nil
