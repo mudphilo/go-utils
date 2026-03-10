@@ -125,7 +125,13 @@ func PaginateDataWithContext(ctx context.Context, db *sql.DB, paginator models.P
 	// calculate offset
 	lastPage := CalculateTotalPages(total, perPage)
 
+	if page < 1 {
+
+		page = 1
+	}
+
 	currentPage := page - 1
+
 	offset := 0
 
 	if currentPage > 0 {
@@ -141,6 +147,11 @@ func PaginateDataWithContext(ctx context.Context, db *sql.DB, paginator models.P
 	if offset > total {
 
 		offset = total - (currentPage * perPage)
+	}
+
+	if offset < 0 {
+
+		offset = currentPage * perPage
 	}
 
 	from := offset + 1
