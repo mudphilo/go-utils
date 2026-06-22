@@ -146,7 +146,7 @@ func HTTPRequest(ctx context.Context, method, url string, headers map[string]str
 
 	method = strings.ToUpper(strings.TrimSpace(method))
 
-	if method != "GET" && method != "POST" && method != "PUT" && method != "DELETE" {
+	if method != "GET" && method != "POST" && method != "PUT" && method != "DELETE" && method != "PATCH" {
 
 		return 0, "invalid method"
 	}
