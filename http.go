@@ -142,34 +142,47 @@ func HTTPPostWithContext(ctx context.Context, url string, headers map[string]str
 
 func HTTPRequest(ctx context.Context, method, url string, headers map[string]string, payload interface{}) (httpStatus int, response string) {
 
+	var req *http.Request
+
+	method = strings.ToUpper(strings.TrimSpace(method))
+
+	if method != "GET" && method != "POST" && method != "PUT" && method != "DELETE" {
+
+		return 0, "invalid method"
+	}
+
 	if payload == nil {
 
-		payload = "{}"
+		jsonData, _ := json.Marshal(payload)
+		reqL, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(jsonData))
+		if err != nil {
+
+			log.Printf("got error making http request %s", err.Error())
+			return 0, err.Error()
+		}
+
+		req = reqL
+
+	} else {
+
+		reqL, err := http.NewRequestWithContext(ctx, method, url, nil)
+		if err != nil {
+
+			log.Printf("got error making http request %s", err.Error())
+			return 0, err.Error()
+		}
+
+		req = reqL
 	}
-
-	jsonData, _ := json.Marshal(payload)
-
-	req, err := http.NewRequestWithContext(ctx, strings.ToUpper(method), url, bytes.NewBuffer(jsonData))
-	if err != nil {
-
-		log.Printf("got error making http request %s", err.Error())
-		return 0, err.Error()
-	}
-
-	logHeaders := make(map[string]string)
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-
-	logHeaders["Content-Type"] = "application/json"
-	logHeaders["Accept"] = "application/json"
 
 	if headers != nil {
 
 		for k, v := range headers {
 
 			req.Header.Set(k, v)
-			logHeaders[k] = v
 		}
 	}
 
