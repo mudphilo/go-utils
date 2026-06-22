@@ -1,14 +1,10 @@
 package library
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/jinzhu/now"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"log"
 	"math"
-	"net"
 	"net/http"
 	"reflect"
 	"regexp"
@@ -16,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/jinzhu/now"
 )
 
 const notSetError = "is not set"
@@ -264,17 +262,17 @@ func StringToTime(stringTime string) time.Time {
 		return time.Now()
 	}
 
-	parts := strings.Split(stringTime," ")
+	parts := strings.Split(stringTime, " ")
 	if len(parts) == 1 {
 
-		stringTime = fmt.Sprintf("%s 00:00:00",parts[0])
+		stringTime = fmt.Sprintf("%s 00:00:00", parts[0])
 	}
 
 	newLayout := StandardDateFormat
 	myTime, err := time.Parse(newLayout, stringTime)
 	if err != nil {
 
-		log.Printf("StringToTime error converting %s to time %s",stringTime,err.Error())
+		log.Printf("StringToTime error converting %s to time %s", stringTime, err.Error())
 	}
 
 	return myTime
@@ -304,7 +302,7 @@ func CalculateTotalPages(total int, perPage int) int {
 
 	totalPages := math.Round(float64(total) / float64(perPage))
 
-	if total > perPage && total % perPage > 0 {
+	if total > perPage && total%perPage > 0 {
 
 		totalPages++
 
@@ -492,31 +490,6 @@ func NextMonth(t time.Time) time.Time {
 	return myTT
 }
 
-func NewNetClient() *http.Client {
-
-	once.Do(func() {
-
-		var netTransport = &http.Transport{
-			Dial: (&net.Dialer{
-				Timeout: 60 * time.Second,
-			}).Dial,
-			DialContext: (&net.Dialer{
-				Timeout: 60 * time.Second,
-			}).DialContext,
-			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
-			TLSHandshakeTimeout: 60 * time.Second,
-		}
-
-
-		netClient = &http.Client{
-			Timeout:   time.Second * 60,
-			Transport: otelhttp.NewTransport(netTransport),
-		}
-	})
-
-	return netClient
-}
-
 /*
 # For details see man 4 crontabs
 
@@ -645,7 +618,6 @@ func RunCron(cron string) bool {
 		}
 
 	}
-
 
 	// check day of month
 	if next {
