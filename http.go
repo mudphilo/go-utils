@@ -384,6 +384,8 @@ func logRequest(method, endpoint string, requestHeaders map[string]string, reque
 			"set-cookie":          {},
 			"client-secret":       {},
 			"proxy-authorization": {},
+			"X-Client-Id":         {},
+			"X-Client-Secret":     {},
 		}
 
 		maskIfSensitive := func(key, value string) string {
