@@ -20,17 +20,14 @@ type Db struct {
 	Params      []interface{}
 	Result      []interface{}
 	Context     context.Context
+	// New fields for Postgres compatibility
+	PrimaryKey string // Set this to "id" or the PK column name to enable RETURNING
+	Ignore     bool   // Set to true for INSERT IGNORE / ON CONFLICT DO NOTHING
 }
 
 const DbError = "Got error  preparing a.Query %s a.Params %v error %s "
 
 func (a *Db) StartTransaction() error {
-
-	if a.Dialect == "postgres" {
-
-		return fmt.Errorf("transactions are not implemented for %s", a.Dialect)
-
-	}
 
 	if a.DBConn != nil {
 
@@ -1308,4 +1305,56 @@ func (a *Db) removeValidParameters() {
 
 	a.Params = par
 
+}
+
+// Save executes the query and returns the LastInsertID
+func (a *Db) Save() (int64, error) {
+
+	// Postgres uses QueryRow + Scan for RETURNING id
+	if a.Dialect == "postgres" && a.PrimaryKey != "" {
+
+		var lastID int64
+		var err error
+
+		if a.TX != nil {
+
+			err = a.TX.QueryRowContext(a.Context, a.Query, a.Params...).Scan(&lastID)
+
+		} else {
+
+			err = a.DB.QueryRowContext(a.Context, a.Query, a.Params...).Scan(&lastID)
+
+		}
+
+		if err != nil && err != sql.ErrNoRows {
+
+			return 0, err
+
+		}
+
+		return lastID, nil
+
+	}
+
+	// Default Exec behavior (MySQL)
+	var res sql.Result
+	var err error
+
+	if a.TX != nil {
+		res, err = a.TX.ExecContext(a.Context, a.Query, a.Params...)
+	} else {
+		res, err = a.DB.ExecContext(a.Context, a.Query, a.Params...)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	// MySQL supports res.LastInsertId()
+	if a.Dialect != "postgres" {
+
+		return res.LastInsertId()
+	}
+
+	return 0, nil
 }

@@ -104,14 +104,18 @@ func PaginateDataWithContext(ctx context.Context, db *sql.DB, paginator models.P
 	if isDebug != 0 {
 
 		log.Printf("Count Query | %s", countQuery)
-		log.Printf("Params | %v", params...)
+		if params != nil && len(params) > 0 {
+			log.Printf("Params | %v", params...)
+		}
 
 	}
 
 	if isDebug != 0 {
 
 		log.Printf("Count Query | %s", countQuery)
-		log.Printf("Params | %v", params...)
+		if params != nil && len(params) > 0 {
+			log.Printf("Params | %v", params...)
+		}
 
 	}
 
@@ -125,7 +129,13 @@ func PaginateDataWithContext(ctx context.Context, db *sql.DB, paginator models.P
 	// calculate offset
 	lastPage := CalculateTotalPages(total, perPage)
 
+	if page < 1 {
+
+		page = 1
+	}
+
 	currentPage := page - 1
+
 	offset := 0
 
 	if currentPage > 0 {
@@ -141,6 +151,11 @@ func PaginateDataWithContext(ctx context.Context, db *sql.DB, paginator models.P
 	if offset > total {
 
 		offset = total - (currentPage * perPage)
+	}
+
+	if offset < 0 {
+
+		offset = currentPage * perPage
 	}
 
 	from := offset + 1
@@ -303,7 +318,9 @@ func DownloadPaginatedDataWithContext(ctx context.Context, db *sql.DB, paginator
 	if isDebug != 0 {
 
 		log.Printf("Count Query | %s", countQuery)
-		log.Printf("Params | %v", params...)
+		if params != nil && len(params) > 0 {
+			log.Printf("Params | %v", params...)
+		}
 
 	}
 	err := dbUtil.FetchOneWithContext().Scan(&total)
@@ -440,14 +457,18 @@ func PaginateDataSlaveWithContext(ctx context.Context, dbSlave *sql.DB, paginato
 	if isDebug != 0 {
 
 		log.Printf("Count Query | %s", countQuery)
-		log.Printf("Params | %v", params...)
+		if params != nil && len(params) > 0 {
+			log.Printf("Params | %v", params...)
+		}
 
 	}
 
 	if isDebug != 0 {
 
 		log.Printf("Count Query | %s", countQuery)
-		log.Printf("Params | %v", params...)
+		if params != nil && len(params) > 0 {
+			log.Printf("Params | %v", params...)
+		}
 
 	}
 
@@ -639,7 +660,9 @@ func DownloadPaginatedDataSlaveWithContext(ctx context.Context, dbSlave *sql.DB,
 	if isDebug != 0 {
 
 		log.Printf("Count Query | %s", countQuery)
-		log.Printf("Params | %v", params...)
+		if params != nil && len(params) > 0 {
+			log.Printf("Params | %v", params...)
+		}
 
 	}
 	err := dbUtil.FetchOneSlaveWithContext().Scan(&total)
